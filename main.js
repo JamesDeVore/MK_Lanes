@@ -1,115 +1,104 @@
-//First, I will need to create the scoring functions for this bowling simulator.
-
-// a simple pure function that takes in number of pins hit, roll number (1/2), and if the prev roll was a strike
-//which means I may need to pass around a scoring object that hold the score and if there was just a spare / strike
-//strike = next 2 rolls added to score
-//spare = next 1 roll
-/*=====================================================
-let frame = {
-  roll1:0,
-  roll2:0,
-  strike:false,
-  spare:false
-}
-let game = [{score} * 12] array of 12 scores
-=====================================================*/
-
-class Bowling  {
+//without using webpack or browserify i have to just copy my other class over
+//not elegant, but hey i've only got 3 hours and I don't want to use any libraries
+class Bowling {
   //just constructing the board, scoring will happen later
-  constructor(){
-    
-    this.scoreBoard = []
+  constructor() {
+    this.scoreBoard = [];
   }
   get score() {
-    return this.scoreBoard
+    return this.scoreBoard;
   }
-  set rollFrame (frameObj) {
-    frameObj.strike = (frameObj.roll1 === 10)
-    if(!frameObj.strike){
-      frameObj.spare = (frameObj.roll1 + frameObj.roll2 === 10)
+  set rollFrame(frameObj) {
+    if (this.scoreBoard.length == 10) {
+      if (this.scoreBoard[9].strike || this.scoreBoard[9].spare) {
+        //if the last frame has a strike or spare
+        this.scoreBoard[9].roll3 = frameObj.roll1;
+        return;
+      }
     }
-    this.scoreBoard.push(frameObj)
+    frameObj.strike = frameObj.roll1 === 10;
+    if (!frameObj.strike) {
+      frameObj.spare = frameObj.roll1 + frameObj.roll2 === 10;
+    }
+    this.scoreBoard.push(frameObj);
   }
-  getScoreByFrame(frame){
-    if(frame  > this.scoreBoard.length){
-      return 'hasnt happened'
+  ScoreByFrame(frame) {
+    if (frame > this.scoreBoard.length) {
+      return "hasnt happened";
     }
     //need to handle strikes and spares
-    if(this.scoreBoard[frame].strike ||this.scoreBoard[frame].spare){
-      return 'calculating'
-    }
-    let sum = 0
-    let virtualBoard = this.scoreBoard.slice(0,this.scoreBoard.length)
+    // if (this.scoreBoard[frame - 1]) {
+    //   if (this.scoreBoard[frame - 1].strike || this.scoreBoard[frame - 1].spare) {
+    //     if (frame !== 10) {
+    //       return "calculating";
+    //     }
+    //   }
+    // }
+    let sum = 0;
+    let virtualBoard = this.scoreBoard.slice(0, this.scoreBoard.length);
     virtualBoard.forEach((frame, index) => {
       sum += frame.roll1;
       sum += frame.roll2;
-      if (frame.spare) {
-        sum += virtualBoard[index + 1].roll1
-      } else if(frame.strike){
-        sum += virtualBoard[index + 1].roll1;
-        //check for consec. strikes
-        if(virtualBoard[index + 1].strike){
-          sum += virtualBoard[index + 2].roll1;
-        } else {
-          sum += virtualBoard[index + 1].roll2;
+      if (virtualBoard[index + 1]) {
+        if (frame.spare && index !== 9) {
+          sum += virtualBoard[index + 1].roll1;
+        } else if (frame.strike && index < 8) {
+          sum += virtualBoard[index + 1].roll1;
+          //check for consec. strikes
+          if (virtualBoard[index + 1].strike) {
+            sum += virtualBoard[index + 2].roll1;
+          } else {
+            sum += virtualBoard[index + 1].roll2;
+          }
+        }
+        if (frame.strike && index === 8) {
+          sum += virtualBoard[index + 1].roll1;
+          if (virtualBoard[index + 1].strike) {
+            //got ANOTHER strike on the next frame add it
+            sum += 10;
+          }
+        }
+        if (frame.strike && index === 9) {
+          sum += virtualBoard[index].roll1;
+          sum += 10; //for this roll
+        }
+        //finally, if they got one final roll
+        if (frame.roll3) {
+          sum += frame.roll3;
         }
       }
     });
     return sum;
   }
-  
 }
-let newGame = new Bowling()
-
-console.log(newGame.score)
-console.log(newGame.getScoreByFrame(2))
-
-
-/*=====================================================
-
-  constructor(){
-    this._board = []
-    
-  }
-  get board(){
-    return this._board
-  }
-  set addRoll(nextScore){
-    this._board.push(nextScore)
-  }
-  
-  rollFrame(rollNum,pins){
-    if(rollNum === 1){
-      this.addRoll = 'X'
-    } else {
-      if(pins < 12){
-        this.addRoll = pins
-      } else {
-        this.addRoll = '/'
-      }
+$(document).ready(() => {
+  let thisGame = null;
+  let currentFrame = 0;
+  $(".start").on("click", () => {
+    thisGame = new Bowling();
+    currentFrame = 0;
+    $("#currentFrame").text(currentFrame);
+    $(".score").html("0");
+  });
+  $(".roll").on("click", () => {
+    if(currentFrame > 9){
+      alert('Game has ended, please start a new game!')
+      return
     }
-  }
-  getScoreByFrame(frameNum){
-    //will get weird thanks to strike / spares
-    var virtualBoard = this._board.slice(0,frameNum);
-
-    if(this._board.length < frameNum){
-      return null
+    if (!thisGame) {
+      alert("Please Start a game first");
+      return;
     }
-    if(virtualBoard.find(val => val === 'X' || val === '/')){
+    let roll1 = Math.floor(Math.random() * 11);
+    let roll2 = Math.floor(Math.random() * (11 - roll1));
 
-      return 'calcuating...'
-    }
-    let sum = 0;
-    for(let i=0; i < frameNum; i++){
-      sum += this._board[i]
-    }
-    console.log(sum)
-    return sum
-  }
-  
-
-=====================================================*/
-
-
-
+    thisGame.rollFrame = { roll1, roll2 };    
+    let thisFrame = $(".scorecard").find('.frame')[currentFrame]
+    $(thisFrame).find('.score').text(thisGame.ScoreByFrame(currentFrame))
+    currentFrame++;
+    $("#currentFrame").text(currentFrame + 1);
+    if(roll1 === 10){roll1 = "STRIKE!"}
+        $("#roll1").text(roll1);
+        $("#roll2").text(roll2);
+  });
+});
